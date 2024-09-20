@@ -223,8 +223,7 @@ test "expressions" {
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
-// In 0.14, ArrayList is renamed to DynamicArray
-// and Unmanaged is the default.
+// ArrayList is planned to be renamed as DynamicArray and Unmanaged as the default.
 const DynamicArray = std.ArrayListUnmanaged;
 const Lexer = @import("lexer.zig");
 const BindingPower = @import("binding_power.zig");
