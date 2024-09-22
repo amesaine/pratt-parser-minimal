@@ -36,7 +36,7 @@ const Parser = struct {
                 if (operator == '(') {
                     p.sexprs.len -= 1;
                     const temp = try p.parse_bp(0);
-                    assert(p.peek_tk().op == ')');
+                    assert(p.next_tk().op == ')');
                     break :root p.sexprs.get(temp);
                 } else {
                     const bp = BindingPower.prefix(operator);

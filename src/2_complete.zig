@@ -39,28 +39,29 @@ const Parser = struct {
     allocator: Allocator,
     root: *Sexpr,
     tokens: []const Lexer.Token,
-    tk_i: usize,
+    tok_i: usize,
 
     fn parse(p: *Parser) !void {
         p.root = try p.parse_bp(0);
     }
 
     fn parse_bp(p: *Parser, bp_min: u8) !*Sexpr {
-        assert(p.tk_i < p.tokens.len);
+        assert(p.tok_i < p.tokens.len);
 
         var root_ptr = try p.allocator.create(Sexpr);
         errdefer p.allocator.destroy(root_ptr);
 
-        const first_tk = p.tokens[p.tk_i];
-        p.tk_i += 1;
+        const first_tk = p.tokens[p.tok_i];
+        p.tok_i += 1;
 
         root_ptr.* = switch (first_tk) {
             .atom => |ch| Sexpr{ .atom = ch },
             .op => |op| root: {
                 if (op == '(') {
                     const temp = try p.parse_bp(0);
-                    assert(p.tokens[p.tk_i] == .op);
-                    assert(p.tokens[p.tk_i].op == ')');
+                    assert(p.tokens[p.tok_i] == .op);
+                    assert(p.tokens[p.tok_i].op == ')');
+                    p.tok_i += 1;
                     break :root temp.*;
                 } else {
                     const bp = BindingPower.prefix(op);
@@ -74,13 +75,13 @@ const Parser = struct {
                     } };
                 }
             },
-            else => std.debug.panic("Expected atom. Got {?}\n", .{p.tk_i}),
+            else => std.debug.panic("Expected atom. Got {?}\n", .{p.tok_i}),
         };
 
         while (true) {
             // The token list is .eof terminated.
-            assert(p.tk_i < p.tokens.len);
-            const op = switch (p.tokens[p.tk_i]) {
+            assert(p.tok_i < p.tokens.len);
+            const op = switch (p.tokens[p.tok_i]) {
                 .eof => break,
                 .op => |op| op,
                 .atom => |atom| std.debug.panic("Expected op. Got {?}\n", .{atom}),
@@ -88,13 +89,13 @@ const Parser = struct {
 
             if (BindingPower.postfix(op)) |bp| {
                 if (bp.left < bp_min) break;
-                p.tk_i += 1; // eat op
+                p.tok_i += 1; // eat op
 
                 var right_ptr: ?*Sexpr = null;
                 if (op == '[') {
                     right_ptr = try p.parse_bp(bp.right);
-                    assert(p.tokens[p.tk_i].op == ']');
-                    p.tk_i += 1;
+                    assert(p.tokens[p.tok_i].op == ']');
+                    p.tok_i += 1;
                 }
                 const cons_ptr = try p.allocator.create(Sexpr);
                 cons_ptr.* = .{ .cons = .{
@@ -110,13 +111,13 @@ const Parser = struct {
 
             if (BindingPower.infix(op)) |bp| {
                 if (bp.left < bp_min) break;
-                p.tk_i += 1; // eat op
+                p.tok_i += 1; // eat op
 
                 var middle_ptr: ?*Sexpr = null;
                 if (op == '?') {
                     middle_ptr = try p.parse_bp(bp.right);
-                    assert(p.tokens[p.tk_i].op == ':');
-                    p.tk_i += 1;
+                    assert(p.tokens[p.tok_i].op == ':');
+                    p.tok_i += 1;
                 }
 
                 const right_ptr = try p.parse_bp(bp.right);
@@ -158,7 +159,7 @@ pub const Ast = struct {
         var parser = Parser{
             .allocator = allocator,
             .tokens = try tokens.toOwnedSlice(allocator),
-            .tk_i = 0,
+            .tok_i = 0,
             .root = undefined,
         };
 

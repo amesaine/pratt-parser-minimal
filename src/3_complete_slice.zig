@@ -35,7 +35,7 @@ const Parser = struct {
             .op => |op| root: {
                 if (op == '(') {
                     const temp = try p.parse_bp(0);
-                    assert(p.tokens[p.tok_i].op == ')');
+                    assert(p.next_tok().op == ')');
                     break :root temp;
                 } else {
                     const bp = BindingPower.prefix(op);
